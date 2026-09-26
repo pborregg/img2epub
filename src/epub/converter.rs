@@ -325,46 +325,47 @@ pub fn zip_epub(dir: &str, out: &str) -> Result<()> {
     }
 
     let current_dir = env::current_dir()?;
-    let epub_dir = if dir.starts_with('/') {
-        dir.to_string()
-    } else {
-        format!(
-            "{}/{}",
-            current_dir
-                .to_str()
-                .ok_or_else(|| anyhow!("current dir is not valid UTF-8"))?,
-            dir
-        )
+
+    let epub_path = {
+        let path = Path::new(dir);
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            current_dir.join(path)
+        }
     };
 
-    let out_path = if out.starts_with('/') {
-        out.to_string()
-    } else {
-        format!(
-            "{}/{}",
-            current_dir
-                .to_str()
-                .ok_or_else(|| anyhow!("current dir is not valid UTF-8"))?,
-            out
-        )
+    let out_path = {
+        let path = Path::new(out);
+        if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            current_dir.join(path)
+        }
     };
+
+    // Git Bash / sh prefers forward slashes.
+    let epub_dir = epub_path.to_string_lossy().replace('\\', "/");
+    let out_path = out_path.to_string_lossy().replace('\\', "/");
 
     println!("{epub_dir} -> {out_path}");
 
     Command::new("sh")
         .arg("-c")
-        .arg(format!("cd {epub_dir} && zip -X0 {out_path} mimetype"))
+        .arg(format!(
+            "cd \"{epub_dir}\" && zip -X0 \"{out_path}\" mimetype"
+        ))
         .output()?;
+
     Command::new("sh")
         .arg("-c")
         .arg(format!(
-            "cd {epub_dir} && zip -r9 {out_path} * -x mimetype -x .*"
+            "cd \"{epub_dir}\" && zip -r9 \"{out_path}\" * -x mimetype -x '.*'"
         ))
         .output()?;
 
     Ok(())
 }
-
 /// # Errors
 ///
 /// Returns an error if the EPUB file cannot be opened or parsed.

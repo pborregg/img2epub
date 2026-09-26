@@ -69,7 +69,10 @@ pub fn img2epub(opts: EpubOptions) -> Result<()> {
         bail!("title is required");
     };
 
-    let epub_dir = format!("/tmp/epub-{}", Uuid::new_v4());
+    let epub_dir = std::env::temp_dir()
+        .join(format!("epub-{}", Uuid::new_v4()))
+        .to_string_lossy()
+        .into_owned();
     initialize_directory(&epub_dir)?;
 
     // Sort image files by name
